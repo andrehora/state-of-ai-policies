@@ -4,26 +4,6 @@ Data and code behind the report *AI contribution policies in the top 25,000 GitH
 
 https://andrehora.github.io/state-of-ai-policies/
 
-## Quick start
-
-Rebuild every table in the report from the classified data:
-
-```bash
-python3 src/build_report.py
-```
-
-This needs only Python 3.9+. It writes the tables the report's charts read to `data/report/`, and the full table of policies to `data/ai-policies_2026-11-25.csv` (the file the report's Download CSV button links to).
-
-## The report page
-
-`docs/index.html` is the report. It reads its tables from `data/`, so it always matches the data in the repository. To publish it, turn on GitHub Pages for the `main` branch and the `/docs` folder (Settings → Pages). To preview it locally, serve the repository root and open `/docs/`:
-
-```bash
-python3 -m http.server 8000   # then open http://localhost:8000/docs/
-```
-
-On GitHub Pages the page loads the tables from `raw.githubusercontent.com`, because Pages only serves the `docs/` folder.
-
 ## Repository layout
 
 ```
@@ -77,11 +57,7 @@ The downloadable table is dated by snapshot (25 November 2026), so a later run c
 5. `src/collect/human25.py` and `src/collect/slop25.py` find candidate sentences for human duties and countermeasures. Every candidate sentence was read, and false matches were removed. The results are in `data/input/evidence.json`.
 6. `src/collect/links25.py` and `src/collect/findline.py` build permalinks pinned to a commit.
 
-The collection scripts are shared for transparency. They were written for a one-off run, so paths and steps may need adapting; `src/build_report.py` is the reproducible entry point.
-
 **Classification.** Claude Opus 5.5 was used to classify the policies: all the reading and classification was done by it, one policy at a time rather than by keyword rules. An AI model can misread or misclassify a policy, so treat the figures as estimates. Policies with unusual wording may be missed, so counts of human duties, countermeasures, disclosure items and trailers are a lower bound.
-
-**Limits.** Policies kept only on a website, a wiki or in AGENTS.md, with no mention in these files, are not counted, so adoption is a lower bound. Stars and policies change over time; the data is a snapshot from 25 November 2026.
 
 ## References
 
