@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>State of AI Contribution Policies · November 2026</title>
+<meta name="description" content="AI contribution policies in the top 25,000 GitHub repositories: adoption, AI allowance, human duties, disclosure and countermeasures against AI slop.">
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<style>
+/* Design tokens (stand-ins for the Claude page runtime) */
+:root{
+  --font-anthropic-sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --font-anthropic-serif:Georgia,"Times New Roman",serif;
+  --color-bg:#ffffff;--color-fg:#1f1e1d;--color-fg-muted:#6b6a68;--color-panel:#f7f6f3;--color-border-line:#e5e3de;
+  --color-ok:#2f8a57;--color-bad:#c4453c;
+  --cds-chart-muted:#9a9893;--cds-chart-grid:#efede8;--cds-text-secondary:#6b6a68;
+  --cds-surface-popover:#ffffff;--cds-border:#e5e3de;--cds-shadow-popover:0 4px 16px rgba(0,0,0,.10);
+  --cds-font-size-caption:13px;--cds-font-size-body:15px;--cds-font-size-heading:18px;--cds-font-size-title:24px;
+  --cds-font-weight-medium:600;--cds-radius:8px;
+  --cds-gap-xs:6px;--cds-gap-sm:10px;--cds-gap-md:16px;--cds-gap-lg:24px;--cds-gap-xl:32px;
+  --cds-pad-sm:6px;--cds-pad-md:10px;--cds-pad-lg:18px;
+}
+@media (prefers-color-scheme:dark){:root{
+  --color-bg:#1c1b1a;--color-fg:#ecebe8;--color-fg-muted:#a3a19c;--color-panel:#262523;--color-border-line:#3a3936;
+  --color-ok:#4fb57a;--color-bad:#e0675d;
+  --cds-chart-muted:#85837e;--cds-chart-grid:#2f2e2c;--cds-text-secondary:#a3a19c;
+  --cds-surface-popover:#2a2927;--cds-border:#3a3936;--cds-shadow-popover:0 4px 16px rgba(0,0,0,.45);
+}}
+html,body{margin:0;background:var(--color-bg);color:var(--color-fg)}
+body{padding:40px 20px 80px}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em}
+.dash-skeleton{background:linear-gradient(90deg,var(--color-panel),var(--cds-chart-grid),var(--color-panel));background-size:200% 100%;animation:sk 1.4s infinite;border-radius:var(--cds-radius)}
+@keyframes sk{0%{background-position:0 0}100%{background-position:-200% 0}}
+.dash-select,.dash-button{font:inherit;font-size:var(--cds-font-size-body);padding:6px 10px;border:1px solid var(--color-border-line);border-radius:var(--cds-radius);background:var(--color-bg);color:var(--color-fg)}
+.dash-button{cursor:pointer}
+.dash-button:hover{border-color:var(--color-fg-muted)}
+
+/* Report styles */
+.so{max-width:980px;margin:0 auto;font-family:var(--font-anthropic-sans);color:var(--color-fg)}
+.so-kicker{font-size:var(--cds-font-size-caption);color:var(--color-fg-muted);letter-spacing:.04em;margin:0}
+.so-kicker a.so-repo{color:var(--color-fg);text-decoration:underline;text-decoration-color:var(--color-border-line);letter-spacing:0}
+.so-kicker a.so-repo:hover{text-decoration-color:var(--color-fg-muted)}
+.so-gh{display:inline-block;width:13px;height:13px;margin-right:5px;vertical-align:-2px;background-color:currentColor;-webkit-mask:url('github.svg') center/contain no-repeat;mask:url('github.svg') center/contain no-repeat}
+.so-title{font-family:var(--font-anthropic-serif);font-weight:400;font-size:clamp(30px,5vw,46px);line-height:1.08;margin:var(--cds-gap-xs) 0 var(--cds-gap-md)}
+.so-lede{font-size:var(--cds-font-size-heading);line-height:1.5;max-width:44em;margin:0}
+.so-lede b{font-weight:var(--cds-font-weight-medium);font-variant-numeric:tabular-nums}
+.so-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:var(--cds-gap-md);margin:var(--cds-gap-xl) 0 0}
+header .so-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:640px){header .so-kpis{grid-template-columns:minmax(0,1fr)}}
+.so-card{background:var(--color-panel);border:1px solid var(--color-border-line);border-radius:var(--cds-radius);padding:var(--cds-pad-lg)}
+.so-big{font-family:var(--font-anthropic-serif);font-weight:400;font-size:40px;line-height:1.1;font-variant-numeric:tabular-nums;display:block;margin:var(--cds-gap-xs) 0}
+.so-big.so-ok{color:var(--color-ok)}
+.so-big.so-bad{color:var(--color-bad)}
+.so-lbl{font-size:var(--cds-font-size-caption);color:var(--color-fg-muted);margin:0}
+.so-toc{display:flex;flex-wrap:wrap;gap:var(--cds-gap-xs) var(--cds-gap-sm);margin:var(--cds-gap-xl) 0 0;font-size:var(--cds-font-size-caption)}
+.so-toc a{color:var(--color-fg-muted);text-decoration:none;border:1px solid var(--color-border-line);border-radius:999px;padding:4px 12px}
+.so-toc a:hover,.so-toc a:focus-visible{color:var(--color-fg);border-color:var(--color-fg-muted)}
+.so-sec{margin-top:calc(2*var(--cds-gap-xl));padding-top:var(--cds-gap-lg);border-top:1px solid var(--color-border-line)}
+.so-chap{font-size:var(--cds-font-size-heading);font-weight:var(--cds-font-weight-medium);color:var(--color-fg);letter-spacing:.06em;margin:0}
+.so-chap a{color:inherit;text-decoration:none}
+.so-chap a:hover::after,.so-chap a:focus-visible::after{content:' #';color:var(--color-fg-muted)}
+.so-sec h2{font-family:var(--font-anthropic-serif);font-weight:400;font-size:clamp(26px,3.6vw,36px);line-height:1.15;margin:var(--cds-gap-sm) 0 var(--cds-gap-md)}
+.so-sec h3.so-sub{font-family:var(--font-anthropic-serif);font-weight:400;font-size:var(--cds-font-size-title);margin-top:calc(1.5*var(--cds-gap-xl))}
+.so-sec h3{font-size:var(--cds-font-size-body);font-weight:var(--cds-font-weight-medium);margin:var(--cds-gap-lg) 0 var(--cds-gap-xs)}
+.so-p{line-height:1.6;margin:0 0 var(--cds-gap-sm)}
+.so-note{font-size:var(--cds-font-size-caption);color:var(--color-fg-muted);margin:var(--cds-gap-xs) 0 0}
+.so-grid2{display:grid;grid-template-columns:minmax(0,1fr);gap:0}
+.so-chart{position:relative;min-height:120px}
+.so-plot{position:relative}
+.so-plot svg{display:block;overflow:visible}
+.so-lab{font-size:var(--cds-font-size-caption);fill:var(--color-fg)}
+.so-val{font-size:var(--cds-font-size-caption);fill:var(--cds-text-secondary);font-variant-numeric:tabular-nums}
+.so-seg{font-size:11px;fill:var(--color-bg);font-variant-numeric:tabular-nums;pointer-events:none}
+.so-tip{position:absolute;z-index:3;pointer-events:none;background:var(--cds-surface-popover);border:1px solid var(--cds-border);box-shadow:var(--cds-shadow-popover);border-radius:var(--cds-radius);padding:var(--cds-pad-sm) var(--cds-pad-md);font-size:var(--cds-font-size-caption);width:220px}
+.so-tip-h{font-weight:var(--cds-font-weight-medium);margin-bottom:4px;color:var(--color-fg)}
+.so-tip-r{display:flex;gap:6px;align-items:center;color:var(--cds-text-secondary);line-height:1.6}
+.so-tip-r b{margin-left:auto;color:var(--color-fg);font-weight:var(--cds-font-weight-medium);font-variant-numeric:tabular-nums}
+.so-sw{display:inline-block;width:10px;height:10px;border-radius:2px;flex:none}
+.so-legend{display:flex;flex-wrap:wrap;gap:var(--cds-gap-xs) var(--cds-gap-md);list-style:none;padding:0;margin:var(--cds-gap-xs) 0 var(--cds-gap-sm);font-size:var(--cds-font-size-caption);color:var(--color-fg-muted)}
+.so-legend li{display:flex;align-items:center;gap:6px}
+.so-callouts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:var(--cds-gap-md);margin-top:var(--cds-gap-lg)}
+.so-callouts .so-card h4{margin:0 0 var(--cds-gap-xs);font-size:var(--cds-font-size-body);font-weight:var(--cds-font-weight-medium)}
+.so-callouts .so-card p{margin:0;font-size:var(--cds-font-size-caption);line-height:1.55;color:var(--color-fg-muted)}
+a.so-ex{display:block;color:inherit;text-decoration:none;transition:border-color .15s}
+a.so-ex:hover,a.so-ex:focus-visible{border-color:var(--color-fg-muted)}
+.so-ex-src{display:block;margin-top:var(--cds-gap-sm);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:var(--color-fg-muted);overflow-wrap:anywhere}
+.so-code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.6;background:var(--color-panel);border:1px solid var(--color-border-line);border-radius:var(--cds-radius);padding:var(--cds-pad-md);margin:var(--cds-gap-sm) 0 0}
+.so-filters{display:flex;flex-wrap:wrap;gap:var(--cds-gap-sm);margin:var(--cds-gap-sm) 0}
+.so-search{font:inherit;font-size:var(--cds-font-size-body);padding:6px 10px;border:1px solid var(--color-border-line);border-radius:var(--cds-radius);background-color:var(--color-bg);color:var(--color-fg);flex:1 1 220px;min-width:0}
+a.dash-button#dl-repos{text-decoration:none;display:inline-flex;align-items:center}
+.so-tablewrap{max-height:520px;overflow:auto;border:1px solid var(--color-border-line);border-radius:var(--cds-radius)}
+.so-table{width:100%;border-collapse:collapse;font-size:var(--cds-font-size-caption)}
+.so-table th{position:sticky;top:0;background:var(--color-panel);text-align:left;font-weight:var(--cds-font-weight-medium);padding:8px 10px;border-bottom:1px solid var(--color-border-line);white-space:nowrap}
+.so-table td{padding:6px 10px;border-bottom:1px solid var(--color-border-line)}
+.so-table .n{text-align:right;font-variant-numeric:tabular-nums}
+.so-table td.so-snip{min-width:280px;max-width:420px;color:var(--color-fg-muted);line-height:1.45}
+.so-table td.so-nw{white-space:nowrap}
+.so-table td.so-ev{min-width:200px;max-width:300px;vertical-align:top}
+.so-ev-v{font-weight:var(--cds-font-weight-medium)}
+.so-ev-x{color:var(--color-fg-muted);line-height:1.45;margin-top:2px}
+.so-langcell{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.so-langcell img.so-langico{display:inline-block;width:14px;height:14px;max-width:none;margin:0;flex:none}
+.so-table a{color:inherit;text-decoration:underline;text-decoration-color:var(--color-border-line)}
+.so-err{color:var(--color-bad);font-size:var(--cds-font-size-caption);margin:var(--cds-gap-sm) 0}
+.so-method li{line-height:1.6;margin-bottom:var(--cds-gap-sm)}
+.so-pie-row{display:flex;flex-wrap:wrap;align-items:center;gap:var(--cds-gap-lg) var(--cds-gap-xl)}
+.so-pie-row svg{display:block;flex:none}
+.so-pie-total{font-family:var(--font-anthropic-serif);font-weight:400;font-size:30px;fill:var(--color-fg);font-variant-numeric:tabular-nums}
+.so-pie-sub{font-size:var(--cds-font-size-caption);fill:var(--cds-text-secondary)}
+.so-pie-list{list-style:none;padding:0;margin:0;display:grid;gap:var(--cds-gap-sm);min-width:220px}
+.so-pie-list li{display:flex;align-items:center;gap:8px}
+.so-pie-list b{margin-left:auto;padding-left:var(--cds-gap-md);font-weight:var(--cds-font-weight-medium);font-variant-numeric:tabular-nums}
+.so-refs{padding-left:1.2em;margin:0}
+.so-refs li{line-height:1.6;margin-bottom:var(--cds-gap-sm)}
+.so-refs a{color:inherit}
+@media print{.so-tablewrap{max-height:none;overflow:visible}.so-tip{display:none}}
+</style>
+
+<script>
+/* Minimal stand-in for the Claude page runtime: loads the report tables and redraws. */
+(function () {
+  const SNAPSHOT = '2026-11-25';
+  const SOURCES = {
+    funnel: 'report/funnel.csv', tiers: 'report/tiers.csv', languages: 'report/languages.csv',
+    stance: 'report/stance.csv', human: 'report/human.csv', disclose_where: 'report/disclose_where.csv',
+    disclose_info: 'report/disclose_info.csv', trailers: 'report/trailers.csv', antislop: 'report/antislop.csv',
+    slop_summary: 'report/slop_summary.csv', repos: `ai-policies_${SNAPSHOT}.csv`,
+  };
+  // Local checkout first (serve the repository root), then the GitHub copy (for GitHub Pages).
+  const BASES = ['../data/', 'https://raw.githubusercontent.com/andrehora/state-of-ai-policies/main/data/'];
+  const store = {}, draws = {}, calcs = {};
+  const run = (name) => {
+    const fn = draws[name]; if (!fn) return;
+    document.querySelectorAll(`[data-draw="${name}"]`).forEach((el) => { try { fn(el); } catch (e) { console.error(name, e); } });
+  };
+  const compute = (id) => {
+    const s = calcs[id]; const ins = s.inputs.map((i) => store[i]);
+    if (ins.some((x) => !x || x.status !== 'ok')) { store[id] = { status: ins.some((x) => x && x.status === 'error') ? 'error' : 'loading', data: null }; return; }
+    try { store[id] = { status: 'ok', data: s.fn(...ins.map((x) => x.data)) }; } catch (e) { console.error(id, e); store[id] = { status: 'error', data: null }; }
+  };
+  window.dash = {
+    colors: ['#2f6fd6', '#e08a2c', '#7a5cc8', '#2a9d8f', '#c2508a', '#8a8f98', '#b59a2b', '#4a9bd4'],
+    data: (id) => store[id] || { status: 'loading', data: null },
+    draw(name, fn) { if (fn) draws[name] = fn; run(name); },
+    calc(id, spec) { calcs[id] = spec; compute(id); },
+  };
+  async function load(id, path) {
+    for (const base of BASES) {
+      try { const rows = await d3.csv(base + path); if (rows && rows.length) { store[id] = { status: 'ok', data: rows }; return; } } catch (e) { /* try next */ }
+    }
+    store[id] = { status: 'error', data: null };
+  }
+  const redraw = () => { Object.keys(calcs).forEach(compute); Object.keys(draws).forEach(run); };
+  window.addEventListener('DOMContentLoaded', () => {
+    Promise.all(Object.entries(SOURCES).map(([id, p]) => load(id, p))).then(redraw);
+    let t; window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(redraw, 150); });
+  });
+})();
+</script>
+</head>
+<body>
+
+<div class='so' lang='en'>
+
+<header id='intro'>
+<p class='so-kicker'>STATE OF AI CONTRIBUTION POLICIES · NOVEMBER 2026 · <a class='so-repo' href='https://github.com/andrehora/state-of-ai-policies' target='_blank' rel='noopener'><span class='so-gh' aria-hidden='true'></span>Data and code on GitHub ↗</a></p>
+<h1 class='so-title'>AI contribution policies in the top 25,000 GitHub repositories</h1>
+<p class='so-lede'><b data-draw='n_policy'>—</b> of the 25,000 most-starred GitHub repositories (<b data-draw='n_policy_pct'>—</b>) have an AI contribution policy. <b data-draw='favor_share'>—</b> accept AI, almost always with conditions. <b data-draw='against_share'>—</b> reject it.</p>
+<div class='so-kpis'>
+<div class='so-card' id='kpi-policy'><p class='so-lbl'>Repos with an AI policy</p><span class='so-big' data-draw='k_policy'>—</span><p class='so-lbl'><span data-draw='k_policy_pct'>—</span> of the top 25k</p></div>
+<div class='so-card' id='kpi-favor'><p class='so-lbl'>In favor of AI</p><span class='so-big so-ok' data-draw='k_favor'>—</span><p class='so-lbl'>of policies, with or without conditions</p></div>
+<div class='so-card' id='kpi-against'><p class='so-lbl'>Against AI</p><span class='so-big so-bad' data-draw='k_against'>—</span><p class='so-lbl'>of policies, with or without exceptions</p></div>
+<div class='so-card' id='kpi-human-top'><p class='so-lbl'>Policies that set duties for the human</p><span class='so-big' data-draw='k_human_top'>—</span><p class='so-lbl'>of <span data-draw='k_human_fav3'>—</span> policies that accept AI</p></div>
+<div class='so-card' id='kpi-disc-top'><p class='so-lbl'>Policies that ask for AI disclosure</p><span class='so-big' data-draw='k_disc_top'>—</span><p class='so-lbl'>of <span data-draw='k_disc_all3'>—</span> policies</p></div>
+<div class='so-card' id='kpi-slop-top'><p class='so-lbl'>Policies with a countermeasure against AI slop</p><span class='so-big' data-draw='k_slop_top'>—</span><p class='so-lbl'>of <span data-draw='k_slop_all3'>—</span> policies</p></div>
+</div>
+</header>
+
+<nav class='so-toc' id='toc' aria-label='Sections'><a href='#adoption'>01 · Adoption of AI policies</a><a href='#stance'>02 · AI allowance</a><a href='#humans'>03 · The human</a><a href='#disclosure'>04 · AI disclosure</a><a href='#slop'>05 · Countermeasures against AI slop</a><a href='#explore'>06 · Explore</a></nav>
+
+<section class='so-sec' id='adoption'>
+<p class='so-chap'><a href='#adoption'>01 · ADOPTION OF AI POLICIES</a></p>
+<h2>Over a thousand top projects already set rules for AI</h2>
+<p class='so-p'>1,284 of the top repositories already have an AI contribution policy, most of them as a section of CONTRIBUTING.md. Adoption is highest among the most popular projects and in Rust projects.</p>
+<h3 id='h-funnel'>From repository to AI policy</h3>
+<div class='so-chart dash-skeleton' id='c-funnel' data-draw='c_funnel'></div>
+<div class='so-grid2'>
+<div><h3 id='h-tiers'>Share with an AI policy, by popularity rank</h3><div class='so-chart dash-skeleton' id='c-tiers' data-draw='c_tiers'></div></div>
+<div><h3 id='h-langs'>Share with an AI policy, by main language</h3><div class='so-chart dash-skeleton' id='c-langs' data-draw='c_langs'></div><p class='so-note'>Programming languages with at least 300 repos in the top 25k (HTML and Jupyter Notebook left out). Language is GitHub’s detected primary language.</p></div>
+</div>
+<h3 id='ex-adoption'>Examples</h3>
+<div class='so-callouts so-examples' id='examples-adoption'>
+<a class='so-card so-ex' href='https://github.com/ghostty-org/ghostty/blob/70cee5810605052227608295f2b097322d20e49b/AI_POLICY.md?plain=1#L5' target='_blank' rel='noopener'><h4>A dedicated AI_POLICY.md</h4><p>Ghostty keeps its rules in a standalone AI_POLICY.md, a format many projects now copy.</p><span class='so-ex-src'>ghostty-org/ghostty · AI_POLICY.md:5 ↗</span></a>
+<a class='so-card so-ex' href='https://github.com/n8n-io/n8n/blob/cfbdbbb7368c902eb610cfbe7bdf7347bb4a824f/CONTRIBUTING.md?plain=1#L609' target='_blank' rel='noopener'><h4>A section in CONTRIBUTING.md</h4><p>n8n puts a “Using AI Tools” section inside its contributing guide, next to the PR rules.</p><span class='so-ex-src'>n8n-io/n8n · CONTRIBUTING.md:609 ↗</span></a>
+<a class='so-card so-ex' href='https://github.com/astral-sh/uv/blob/e3e7c1eacb980339352a5ad69affcd3b6c206c92/CONTRIBUTING.md?plain=1#L31' target='_blank' rel='noopener'><h4>A link to an org-wide policy</h4><p>uv’s guide says all AI use must follow a policy shared across the astral-sh organization.</p><span class='so-ex-src'>astral-sh/uv · CONTRIBUTING.md:31 ↗</span></a>
+<a class='so-card so-ex' href='https://github.com/bevyengine/bevy/blob/93af76a2a6228281b4c5c486ec2d8fa5807f0ca2/CONTRIBUTING.md?plain=1#L4' target='_blank' rel='noopener'><h4>A pointer to the project website</h4><p>Bevy’s guide is two lines long and points to an AI policy page on its website.</p><span class='so-ex-src'>bevyengine/bevy · CONTRIBUTING.md:4 ↗</span></a>
+<a class='so-card so-ex' href='https://github.com/kubernetes-sigs/kueue/blob/3d75c6f94e0aba7dace3f8ba6ca8ec35421a5d56/CONTRIBUTING.md?plain=1#L18' target='_blank' rel='noopener'><h4>A pointer to umbrella guidance</h4><p>Kueue links to the AI guidance shared by all Kubernetes projects.</p><span class='so-ex-src'>kubernetes-sigs/kueue · CONTRIBUTING.md:18 ↗</span></a>
+<a class='so-card so-ex' href='https://github.com/chthollyphile/folia-major/blob/27291cbba80699e89c0eaca4d710056ebd7183fe/CONTRIBUTING.md?plain=1#L17' target='_blank' rel='noopener'><h4>In the project’s own language</h4><p>Folia writes its AI rules in Chinese: AI is welcome, but a person must verify every PR.</p><span class='so-ex-src'>chthollyphile/folia-major · CONTRIBUTING.md:17 ↗</span></a>
+</div>
+</section>
+
+<section class='so-sec' id='stance'>
+<p class='so-chap'><a href='#stance'>02 · AI ALLOWANCE</a></p>
+<h2>“Yes, but”: AI is accepted, on conditions</h2>
+<p class='so-p'>Nearly every policy that allows AI asks for something in return, even if only that you understand the code you submit. Outright bans are a minority, and they are more common outside the top 5,000.</p>
+<h3 id='h-pie'>AI allowance at a glance</h3>
+<div class='so-chart dash-skeleton' id='c-pie' data-draw='c_pie'></div>
+<div class='so-grid2'>
+<div><h3 id='h-stance'>AI allowance in the 1,284 policies</h3><div class='so-chart dash-skeleton' id='c-stance' data-draw='c_stance'></div></div>
+<div><h3 id='h-stance-tier'>AI allowance by popularity rank</h3>
+<ul class='so-legend' id='lg-stance-tier'><li><span class='so-sw' data-s='In favor'></span>In favor</li><li><span class='so-sw' data-s='Against'></span>Against</li><li><span class='so-sw' data-s='Neutral'></span>Neutral</li><li><span class='so-sw' data-s='Undetermined'></span>Undetermined</li></ul>
+<div class='so-chart dash-skeleton' id='c-stance-tier' data-draw='c_stance_tier'></div></div>
+</div>
+<p class='so-note'><b>In favor, no condition</b> accepts AI with no extra request. <b>In favor, with conditions</b> asks for anything at all: disclosure, understanding the code, review, no autonomous agents. <b>Against, with exceptions</b> bans or discourages AI but allows narrow uses such as translation. <b>Neutral</b> regulates only PR text, volume or attribution.</p>
+<h3 id='ex-allowance'>Examples</h3>
+<div class='so-callouts so-examples' id='examples-allowance'>
+<a class='so-card so-ex' href='https://github.com/bitfield/script/blob/699601d726d7c9fa722934128921c8f3cd30c770/CONTRIBUTING.md?plain=1#L37' target='_blank' rel='noopener'><h4>In favor, no condition</h4><p>The whole policy: AI is fine, and disclosing it is optional.</p><span class='so-ex-src'>bitfield/script · CONTRIBUTING.md:37 ↗</span></a>
+<a class='so-card so-ex' href='https://github.com/ghostty-org/ghostty/blob/70cee5810605052227608295f2b097322d20e49b/AI_POLICY.md?plain=1#L9' target='_blank' rel='noopener'><h4>In favor, with conditions</h4><p>AI is allowed, but the human in the loop must understand every line.</p><span class='so-ex-src'>ghostty-org/ghostty · AI_POLICY.md:9 ↗</span></a>
+<a class='so-card so-ex' href='https://github.com/9001/copyparty/blob/5a2d8e02137078eb97b0268c73ca8665307e1497/CONTRIBUTING.md?plain=1#L15' target='_blank' rel='noopener'><h4>Against, with an exception</h4><p>AI is banned for code; translation is the only exception, and only if you are fluent.</p><span class='so-ex-src'>9001/copyparty · CONTRIBUTING.md:15 ↗</span></a>
+<a class='so-card so-ex' href='https://github.com/yt-dlp/yt-dlp/blob/da452a569fb3d04091468d920f9b9e68512e0373/CONTRIBUTING.md?plain=1#L37' target='_blank' rel='noopener'><h4>Against</h4><p>Bans LLMs and agents for any kind of contribution, from code to bug reports.</p><span class='so-ex-src'>yt-dlp/yt-dlp · CONTRIBUTING.md:37 ↗</span></a>
+<a class='so-card so-ex' href='https://github.com/obsidianmd/pele/blob/3a2f075ee0c3d914f0fad3545fc0f193693975ac/CONTRIBUTING.md?plain=1#L13' target='_blank' rel='noopener'><h4>Neutral</h4><p>Using AI is neither encouraged nor prohibited; the policy takes no side.</p><span class='so-ex-src'>obsidianmd/pele · CONTRIBUTING.md:13 ↗</span></a>
+<a class='so-card so-ex' href='https://github.com/longbridge/nsh/blob/6f225ceae68018dadf3670a54d19fe0b356124b9/CONTRIBUTING.md?plain=1#L174' target='_blank' rel='noopener'><h4>Even fully AI-written code</h4><p>Welcomes PRs whose code is entirely AI-generated, as long as the change is focused and validated.</p><span class='so-ex-src'>longbridge/nsh · CONTRIBUTING.md:174 ↗</span></a>
+</div>
+</section>
+
+<section class='so-sec' id='humans'>
+<p class='so-chap'><a href='#humans'>03 · THE HUMAN</a></p>
+<h2>Policies put a human in charge</h2>
+<p class='so-p'>Three in four policies that accept AI set duties for the human, often under the name “human in the loop”: understand and explain the change, own it, review and test what the tool produced, and speak for yourself in reviews. The phrase “the human-in-the-loop must fully understand all code” comes from Ghostty’s policy and reappears almost word for word in others, such as Vencord, Pomerium, pyinfra, Zeek and Letta.</p>
+<div class='so-kpis'>
+<div class='so-card' id='kpi-human'><p class='so-lbl'>Policies that set duties for the human</p><span class='so-big' data-draw='k_human'>—</span><p class='so-lbl'>of <span data-draw='k_human_fav'>—</span> policies that accept AI</p></div>
+<div class='so-card' id='kpi-human-share'><p class='so-lbl'>Share of policies that set duties for the human</p><span class='so-big' data-draw='k_human_pct'>—</span><p class='so-lbl'>of <span data-draw='k_human_fav2'>—</span> policies that accept AI</p></div>
+</div>
+<h3 id='h-human-req'>What policies ask of the human</h3>
+<div class='so-chart dash-skeleton' id='c-human-req' data-draw='c_human_req'></div>
+<p class='so-note'>Share of the policies that accept AI. A policy can ask for several of these.</p>
+<h3 id='ex-humans'>Examples</h3>
+<div class='so-callouts so-examples' id='examples-humans'>
+<a class='so-card so-ex' href='https://github.com/juanfont/headscale/blob/adfc6d08aabceb5bdda222ee10e10e7ef6e79ff3/AI_POLICY.md?plain=1#L20' target='_blank' rel='noopener'><h4>Human in the loop</h4><p>Requires a human in the loop who understands what the AI produced.</p><span class='so-ex-src'>juanfont/headscale · AI_POLICY.md:20 ↗</span></a>
+<a class='so-card so-ex' href='https://github.com/storybookjs/storybook/blob/a066aa49a6916f388fb58a932b4d8bb9ee2a2d44/CONTRIBUTING.md?plain=1#L23' target='_blank' rel='noopener'><h4>Never let an LLM speak for you</h4><p>Its AI section is titled “Never let an LLM speak for you”.</p><span class='so-ex-src'>storybookjs/storybook · CONTRIBUTING.md:23 ↗</span></a>
+<a class='so-card so-ex' href='https://github.com/home-assistant/core/blob/e7baa930699026a5ede076cc10b827a99e5ce77a/AI_POLICY.md?plain=1#L9' target='_blank' rel='noopener'><h4>No autonomous agents</h4><p>Autonomous agents may not contribute; PRs believed to come from one are closed.</p><span class='so-ex-src'>home-assistant/core · AI_POLICY.md:9 ↗</span></a>
+<a class='so-card so-ex' href='https://github.com/bitcoin/bitcoin/blob/4cf0f7c80cd4da7c7f79a958f7455c4bfd1f86aa/CONTRIBUTING.md?plain=1#L24' target='_blank' rel='noopener'><h4>In your own words</h4><p>Contributors must understand and explain their own work in their own words.</p><span class='so-ex-src'>bitcoin/bitcoin · CONTRIBUTING.md:24 ↗</span></a>
+<a class='so-card so-ex' href='https://github.com/tashfeenahmed/freellmapi/blob/7c9a38050814585958f690a96e13f5500459b0a7/CONTRIBUTING.md?plain=1#L96' target='_blank' rel='noopener'><h4>Test it for real</h4><p>Run the code yourself, not just the prompt that produced it.</p><span class='so-ex-src'>tashfeenahmed/freellmapi · CONTRIBUTING.md:96 ↗</span></a>
+<a class='so-card so-ex' href='https://github.com/Homebrew/brew/blob/cc5db66abe5cf301baa1f3b618824e1e20f11ceb/CONTRIBUTING.md?plain=1#L32' target='_blank' rel='noopener'><h4>Answer reviewers yourself</h4><p>Maintainer questions and review comments must be answered without AI.</p><span class='so-ex-src'>Homebrew/brew · CONTRIBUTING.md:32 ↗</span></a>
+</div>
+</section>
+
+<section class='so-sec' id='disclosure'>
+<p class='so-chap'><a href='#disclosure'>04 · AI DISCLOSURE</a></p>
+<h2>Say you used AI, usually in the PR description</h2>
+<p class='so-p'>About a third of all policies ask contributors to say when they used AI, and most of those make it mandatory. The pull request is the usual place, either in the description or in a section of the PR template; others want a commit trailer, and a few want the generated passage itself marked in a quote or <code>&lt;details&gt;</code> block. Many policies don’t say where.</p>
+<div class='so-kpis'>
+<div class='so-card' id='kpi-disc'><p class='so-lbl'>Policies that ask for AI disclosure</p><span class='so-big' data-draw='k_disc_n'>—</span><p class='so-lbl'>of <span data-draw='k_disc_all'>—</span> policies</p></div>
+<div class='so-card' id='kpi-disc-share'><p class='so-lbl'>Share of policies that ask for AI disclosure</p><span class='so-big' data-draw='k_disc_pct'>—</span><p class='so-lbl'>of <span data-draw='k_disc_all2'>—</span> policies</p></div>
+</div>
+<div class='so-grid2'>
+<div><h3 id='h-disc-where'>Where to disclose</h3>
+<ul class='so-legend' id='lg-disc'><li><span class='so-sw' data-c='0'></span>Required</li><li><span class='so-sw' data-c='1'></span>Recommended</li></ul>
+<div class='so-chart dash-skeleton' id='c-disc-where' data-draw='c_disc_where'></div></div>
+<div><h3 id='h-disc-info'>What to include (share of the 412 policies that ask for disclosure)</h3><div class='so-chart dash-skeleton' id='c-disc-info' data-draw='c_disc_info'></div></div>
+</div>
+<h3 id='h-disc-example'>A disclosure that satisfies most policies</h3>
+<div class='so-code'><div>## AI usage</div><div>Tool: Claude Code (Claude Opus 4.8)</div><div>Use: drafted the parsing function and its tests; I rewrote the error handling.</div><div>Verification: ran the test suite locally and reviewed the full diff.</div></div>
+<h3 id='ex-disclosure'>Examples</h3>
+<div class='so-callouts so-examples' id='examples-disclosure'>
+<a class='so-card so-ex' href='https://github.com/ggml-org/llama.cpp/blob/244640b7f26e2a7301b27a24edc4f7feaf97d52f/CONTRIBUTING.md?plain=1#L15' target='_blank' rel='noopener'><h4>Disclose or be banned</h4><p>Undisclosed AI use can get an account permanently banned.</p><span class='so-ex-src'>ggml-org/llama.cpp · CONTRIBUTING.md:15 ↗</span></a>
+<a class='so-card so-ex' href='https://github.com/denoland/deno/blob/d8c551b5a5b46d8ec3892a91d0364cfcbca2c681/.github/CONTRIBUTING.md?plain=1#L4' target='_blank' rel='noopener'><h4>In the PR description</h4><p>The opening lines of the guide: if you used AI, you must disclose it in the PR.</p><span class='so-ex-src'>denoland/deno · .github/CONTRIBUTING.md:4 ↗</span></a>
+<a class='so-card so-ex' href='https://github.com/starship/starship/blob/1b5c2f257ef276c3020899623a1942b3ecd457f7/AI_POLICY.md?plain=1#L17' target='_blank' rel='noopener'><h4>A section of the PR template</h4><p>Disclosure goes in a dedicated AI-Assistance section of the PR template.</p><span class='so-ex-src'>starship/starship · AI_POLICY.md:17 ↗</span></a>
+<a class='so-card so-ex' href='https://github.com/zed-industries/zed/blob/552644414c580ed540f027f6439881ea5c88d02a/CONTRIBUTING.md?plain=1#L52' target='_blank' rel='noopener'><h4>Quote blocks for AI text</h4><p>Sharing an LLM chat? Quote only the relevant part, marked as AI-generated.</p><span class='so-ex-src'>zed-industries/zed · CONTRIBUTING.md:52 ↗</span></a>
+<a class='so-card so-ex' href='https://github.com/Taiko2k/Tauon/blob/0abe7521e05ee7da467329a168b0da5432268f79/CONTRIBUTING.md?plain=1#L21' target='_blank' rel='noopener'><h4>Name the model</h4><p>AI-written code is allowed if you disclose it and say which model you used.</p><span class='so-ex-src'>Taiko2k/Tauon · CONTRIBUTING.md:21 ↗</span></a>
+<a class='so-card so-ex' href='https://github.com/PriorLabs/TabPFN/blob/c2ea75c9b72c8f991a4dd09021f1d79d4358d82f/CONTRIBUTING.md?plain=1#L24' target='_blank' rel='noopener'><h4>Tick a box</h4><p>Contributors disclose AI use by ticking a box in the pull request template.</p><span class='so-ex-src'>PriorLabs/TabPFN · CONTRIBUTING.md:24 ↗</span></a>
+</div>
+<h3 class='so-sub' id='trailers'>Git trailers: <code>Assisted-by</code> is the most requested</h3>
+<p class='so-p'><code>Assisted-by: AGENT:MODEL</code> is the most requested and least contested trailer (mastodon, vim, openssl, nextcloud, PX4). <code>Co-authored-by</code> is mentioned most, but more policies forbid it than ask for it: one side wants transparency in git history, the other says authorship belongs to people.</p>
+<ul class='so-legend' id='lg-trailers'><li><span class='so-sw' data-c='0'></span>Asked for or allowed</li><li><span class='so-sw' data-c='1'></span>Forbidden or discouraged</li></ul>
+<div class='so-chart dash-skeleton' id='c-trailers' data-draw='c_trailers'></div>
+<h3 id='ex-trailers'>Trailer examples</h3>
+<div class='so-callouts so-examples' id='examples-trailers'>
+<a class='so-card so-ex' href='https://github.com/openssl/openssl/blob/d94024ffc7e726566a6255228ad0a7de4cfc956d/CONTRIBUTING.md?plain=1#L147' target='_blank' rel='noopener'><h4>Assisted-by with agent and model</h4><p>Non-trivial AI help is declared with an Assisted-by: {agent}:{model} trailer.</p><span class='so-ex-src'>openssl/openssl · CONTRIBUTING.md:147 ↗</span></a>
+<a class='so-card so-ex' href='https://github.com/babel/babel/blob/0a06c30f7279f29d799c835da18e2be967b24482/AI_POLICY.md?plain=1#L9' target='_blank' rel='noopener'><h4>Assisted-by, never Co-authored-by</h4><p>Use Assisted-by for LLM-generated commits, and never Co-authored-by.</p><span class='so-ex-src'>babel/babel · AI_POLICY.md:9 ↗</span></a>
+<a class='so-card so-ex' href='https://github.com/kata-containers/kata-containers/blob/048856867c10acfa0281d411b1a74da5f27b04a7/CONTRIBUTING.md?plain=1#L61' target='_blank' rel='noopener'><h4>Assisted-By vs Generated-By</h4><p>Assisted-By for minor help, Generated-By when AI wrote a substantial part.</p><span class='so-ex-src'>kata-containers/kata-containers · CONTRIBUTING.md:61 ↗</span></a>
+<a class='so-card so-ex' href='https://github.com/moby/moby/blob/09e4d48143a14f96da894e8a0b55ef04e61b432d/CONTRIBUTING.md?plain=1#L108' target='_blank' rel='noopener'><h4>Co-authored-by is for humans</h4><p>Co-Authored-By is reserved for humans; disclosure goes in the PR description.</p><span class='so-ex-src'>moby/moby · CONTRIBUTING.md:108 ↗</span></a>
+<a class='so-card so-ex' href='https://github.com/libkrun/libkrun/blob/d3dc2a75bac6a0ac8e4047791e5ce5960bf289b6/CONTRIBUTING.md?plain=1#L134' target='_blank' rel='noopener'><h4>Harness and model in the trailer</h4><p>The Assisted-by value names both the coding agent and the model behind it.</p><span class='so-ex-src'>libkrun/libkrun · CONTRIBUTING.md:134 ↗</span></a>
+<a class='so-card so-ex' href='https://github.com/floci-io/floci/blob/42dadc4ed98664cad635f245f95390e35c2731ad/CONTRIBUTING.md?plain=1#L127' target='_blank' rel='noopener'><h4>No AI co-authors, enforced by CI</h4><p>A CI check fails commits that list an AI tool in Co-Authored-By.</p><span class='so-ex-src'>floci-io/floci · CONTRIBUTING.md:127 ↗</span></a>
+</div>
+</section>
+
+<section class='so-sec' id='slop'>
+<p class='so-chap'><a href='#slop'>05 · COUNTERMEASURES AGAINST AI SLOP</a></p>
+<h2>How projects defend their review time</h2>
+<p class='so-p'>Besides the human duties in section 03, the first line of defense is accountability: disclose AI use, and keep autonomous agents out. Enforcement follows, from closing without review to public bans. Newer and rarer are barriers to entry and traps aimed at agents.</p>
+<div class='so-kpis'>
+<div class='so-card' id='kpi-slop'><p class='so-lbl'>Policies with a countermeasure against AI slop</p><span class='so-big' data-draw='k_slop_n'>—</span><p class='so-lbl'>of <span data-draw='k_slop_all'>—</span> policies</p></div>
+<div class='so-card' id='kpi-slop-share'><p class='so-lbl'>Share of policies with a countermeasure against AI slop</p><span class='so-big' data-draw='k_slop_pct'>—</span><p class='so-lbl'>of <span data-draw='k_slop_all2'>—</span> policies</p></div>
+</div>
+<p class='so-note'>Counts any mechanism below except disclosure, which is covered in section 04.</p>
+<ul class='so-legend' id='lg-slop'><li><span class='so-sw' data-c='0'></span>Human accountability</li><li><span class='so-sw' data-c='1'></span>Enforcement</li><li><span class='so-sw' data-c='2'></span>Barriers to entry</li><li><span class='so-sw' data-c='3'></span>Automation and traps</li></ul>
+<div class='so-chart dash-skeleton' id='c-slop' data-draw='c_slop'></div>
+<h3 id='ex-slop'>Examples</h3>
+<div class='so-callouts so-examples' id='examples-slop'>
+<a class='so-card so-ex' href='https://github.com/ghostty-org/ghostty/blob/70cee5810605052227608295f2b097322d20e49b/AI_POLICY.md?plain=1#L5' target='_blank' rel='noopener'><h4>Disclose every use</h4><p>Ghostty asks contributors to disclose all AI use, whatever the tool.</p><span class='so-ex-src'>ghostty-org/ghostty · AI_POLICY.md:5 ↗</span></a>
+<a class='so-card so-ex' href='https://github.com/microsoft/pyright/blob/2981f9f1ce41be5c15667da1f7a3cfda4f245089/AI_POLICY.md?plain=1#L15' target='_blank' rel='noopener'><h4>No autonomous agents</h4><p>Pyright keeps a human in charge and does not accept contributions from autonomous agents.</p><span class='so-ex-src'>microsoft/pyright · AI_POLICY.md:15 ↗</span></a>
+<a class='so-card so-ex' href='https://github.com/home-assistant/frontend/blob/207cbcc585695c12501f7a0f9103a167f20e1569/AI_POLICY.md?plain=1#L29' target='_blank' rel='noopener'><h4>Closed without review</h4><p>Pull requests that look like unreviewed AI output are closed without review.</p><span class='so-ex-src'>home-assistant/frontend · AI_POLICY.md:29 ↗</span></a>
+<a class='so-card so-ex' href='https://github.com/FreeTubeApp/FreeTube/blob/69dbabc552401fc7b1fd9899a08292a03baabf65/CONTRIBUTING.md?plain=1#L8' target='_blank' rel='noopener'><h4>Repeat offenders banned</h4><p>Anyone who keeps sending AI-made issues or PRs gets banned.</p><span class='so-ex-src'>FreeTubeApp/FreeTube · CONTRIBUTING.md:8 ↗</span></a>
+<a class='so-card so-ex' href='https://github.com/Pennyw0rth/NetExec/blob/89d25017ad40afa70551b6e8d006c2956ef4b282/AI_POLICY.md?plain=1#L12' target='_blank' rel='noopener'><h4>Accepted issues only</h4><p>PRs made with AI are only allowed for issues the maintainers have accepted.</p><span class='so-ex-src'>Pennyw0rth/NetExec · AI_POLICY.md:12 ↗</span></a>
+<a class='so-card so-ex' href='https://github.com/stalwartlabs/stalwart/blob/b2d3df9a9b1c3e0cd1d5ccccc16acd6f44381afa/CONTRIBUTING.md?plain=1#L7' target='_blank' rel='noopener'><h4>Vouched contributors only</h4><p>After a flood of low-quality AI PRs, only vouched contributors can open pull requests.</p><span class='so-ex-src'>stalwartlabs/stalwart · CONTRIBUTING.md:7 ↗</span></a>
+<a class='so-card so-ex' href='https://github.com/pybind/pybind11/blob/a3954715fe849519754abded4d572bf7edab67e3/.github/CONTRIBUTING.md?plain=1#L39' target='_blank' rel='noopener'><h4>A cap on open PRs</h4><p>New contributors can keep only a couple of pull requests open at once.</p><span class='so-ex-src'>pybind/pybind11 · .github/CONTRIBUTING.md:39 ↗</span></a>
+<a class='so-card so-ex' href='https://github.com/bkrem/awesome-solidity/blob/a409e911dd368776360fbb17e19e43f00eee4a32/CONTRIBUTING.md?plain=1#L42' target='_blank' rel='noopener'><h4>A canary word for agents</h4><p>PRs written by an agent must end with the word “Supercalifragilisticexpialidocious”.</p><span class='so-ex-src'>bkrem/awesome-solidity · CONTRIBUTING.md:42 ↗</span></a>
+<a class='so-card so-ex' href='https://github.com/clash-verge-rev/clash-verge-rev/blob/1dba31c6afd41ecdc80f137f250386bb1a60868a/CONTRIBUTING.md?plain=1#L11' target='_blank' rel='noopener'><h4>Automated slop labels</h4><p>An automated review scores PRs and labels risky ones ai-slop:med or ai-slop:high.</p><span class='so-ex-src'>clash-verge-rev/clash-verge-rev · CONTRIBUTING.md:11 ↗</span></a>
+</div>
+</section>
+
+<section class='so-sec' id='explore'>
+<p class='so-chap'><a href='#explore'>06 · EXPLORE</a></p>
+<h2>Every repository with an AI policy</h2>
+<div class='so-filters' id='filters'>
+<select class='dash-select' id='f-stance' aria-label='AI allowance'><option value=''>Any AI allowance</option><option>In favor, no condition</option><option>In favor, with conditions</option><option>Neutral</option><option>Against, with exceptions</option><option>Against</option><option>Undetermined</option></select>
+<select class='dash-select' id='f-lang' aria-label='Main language' data-draw='f_lang'></select>
+<input class='so-search' id='f-q' type='search' placeholder='Search repositories' aria-label='Search repositories'>
+<a class='dash-button' id='dl-repos' href='https://github.com/andrehora/state-of-ai-policies/raw/main/data/ai-policies_2026-11-25.csv' target='_blank' rel='noopener'>Download CSV (GitHub)</a>
+</div>
+<div class='so-tablewrap'>
+<table class='so-table' id='t-repos'>
+<thead><tr><th>Repository</th><th class='n'>Stars</th><th>Main language</th><th>AI allowance</th><th>Policy on GitHub</th><th>Policy excerpt</th><th>AI disclosure</th><th>Human duties</th></tr></thead>
+<tbody data-draw='t_repos'></tbody>
+</table>
+</div>
+</section>
+
+<section class='so-sec' id='references'>
+<p class='so-chap'><a href='#references'>REFERENCES</a></p>
+<ol class='so-refs'>
+<li><a href='https://arxiv.org/abs/2609.07542' target='_blank' rel='noopener'>Hora, A., Robbes, R. and Zacchiroli, S. “We Permit the Use of AI, but [...]”: The Landscape of AI Policies in Popular Open Source Projects. arXiv:2609.07542.</a></li>
+<li><a href='https://arxiv.org/abs/2605.16706v2' target='_blank' rel='noopener'>Hora, A. and Robbes, R. AI Policy, Disclosure, and Human in the Loop: How Are Contribution Guidelines Adapting to GenAI? International Conference on Software Maintenance and Evolution (ICSME), 2026.</a></li>
+</ol>
+<p class='so-note'>Both studies find that most policies allow AI-assisted contributions, usually with conditions, that about half require disclosure, and that most expect human involvement. This report sees a similar picture across a larger set of repositories, with one difference: here about a third of policies ask for disclosure, and only 37% in the top 1,000, so the gap is not explained by the larger sample alone.</p>
+</section>
+
+<section class='so-sec' id='method'>
+<p class='so-chap'><a href='#method'>METHODOLOGY</a></p>
+<ul class='so-method'>
+<li><b>Sample.</b> The 25,000 most-starred public GitHub repositories (forks excluded, at least 2,736 stars), collected on 25 November 2026. One repository could not be downloaded.</li>
+<li><b>Files.</b> CONTRIBUTING.md at the root, <code>.github/</code> and <code>docs/</code>, plus AI_POLICY.md and AI_USAGE_POLICY.md. Policies kept only on a website, a wiki or in AGENTS.md, with no mention in these files, are not counted, so adoption is a lower bound.</li>
+<li><b>Classification.</b> Claude Opus 5.5 was used to classify the policies: all the reading and classification described below was done by it, one policy at a time rather than by keyword rules. Where a count starts from text patterns, the patterns only found candidate sentences; every candidate was then read, and false matches were removed. Policies with unusual wording may still be missed, so those counts are a lower bound. An AI model can misread or misclassify a policy, so treat the figures as estimates.</li>
+<li><b>01 · Adoption of AI policies.</b> A policy is a rule about using AI to contribute, found in CONTRIBUTING.md or an AI_POLICY.md file. Every candidate file was read; projects that only describe their own AI features or agent tooling were removed as false positives. Popularity tiers are ranks by star count. Language is GitHub’s detected primary language.</li>
+<li><b>02 · AI allowance.</b> Each policy was read and placed in one category. Ambiguous cases were reread in full, and policies that only link elsewhere (Rust, Bevy, Bazel, RIOT, Joomla, KiCad, Apache and others) were read at the linked page or file. Any extra request, even only understanding the code, counts as a condition. Undetermined means the linked policy could not be found.</li>
+<li><b>03 · The human.</b> Counted only among policies that accept AI. A duty counts when the policy asks it of the contributor, not of maintainers.</li>
+<li><b>04 · AI disclosure.</b> Where and how strongly disclosure is asked was classified for each policy. What to include, and each mention of a git trailer (labelled as asked for or forbidden), were found by text patterns and then read.</li>
+<li><b>05 · Countermeasures against AI slop.</b> Disclosure comes from section 04; the other mechanisms were found by text patterns and then read.</li>
+<li><b>06 · Explore.</b> The table holds every policy, with a permalink to the line where its AI rules start and short excerpts that support the disclosure and human-duty columns. When the disclosure rule is only in a linked document, the excerpt shows the sentence that points to it.</li>
+</ul>
+</section>
+
+</div>
+
+<script>
+const SO = window.SO = {};
+SO.fmt = d3.format(',');
+SO.pct = (v) => (Math.round(+v * 10) / 10).toFixed(1) + '%';
+SO.pct0 = (v) => Math.round(+v) + '%';
+SO.color = (i) => dash.colors[i % dash.colors.length];
+SO.stanceColors = {
+  'In favor': 'var(--color-ok)',
+  'In favor, no condition': 'var(--color-ok)',
+  'In favor, with conditions': 'color-mix(in srgb, var(--color-ok) 65%, var(--color-bg))',
+  'Neutral': 'var(--cds-chart-muted)',
+  'Undetermined': 'color-mix(in srgb, var(--cds-chart-muted) 50%, var(--color-bg))',
+  'Against, with exceptions': 'color-mix(in srgb, var(--color-bad) 65%, var(--color-bg))',
+  'Against': 'var(--color-bad)',
+};
+SO.stanceColor = (s) => SO.stanceColors[s] || SO.color(0);
+SO.bar = (x, y, w, h, r) => {
+  w = Math.max(0, w); r = Math.min(r, w / 2, h / 2);
+  if (r <= 0) return `M${x},${y}h${w}v${h}h${-w}Z`;
+  return `M${x},${y}h${w - r}a${r},${r} 0 0 1 ${r},${r}v${h - 2 * r}a${r},${r} 0 0 1 ${-r},${r}h${-(w - r)}Z`;
+};
+SO.wait = (el, st) => {
+  el.replaceChildren();
+  if (st === 'loading') { el.classList.add('dash-skeleton'); return; }
+  el.classList.remove('dash-skeleton');
+  if (st === 'error' || st === 'missing') {
+    const p = document.createElement('p'); p.className = 'so-err';
+    p.textContent = 'This chart couldn’t load its data.'; el.append(p);
+  } else { el.textContent = '—'; }
+};
+SO.text = (el, d, fn) => {
+  if (d.status !== 'ok' || d.data == null) { el.textContent = '—'; return; }
+  el.textContent = fn(d.data);
+};
+SO.last = (d) => d[d.length - 1] || {};
+SO.hbar = (el, o) => {
+  el.classList.remove('dash-skeleton');
+  el.replaceChildren();
+  const W = Math.max(260, el.clientWidth || 0);
+  const rows = o.rows;
+  const wrap = d3.select(el).append('div').attr('class', 'so-plot');
+  const svg = wrap.append('svg').attr('width', W).attr('role', 'img').attr('aria-label', o.aria);
+  const probe = svg.append('g');
+  let lw = 0;
+  rows.forEach((r) => { const t = probe.append('text').attr('class', 'so-lab').text(r[o.label]); lw = Math.max(lw, t.node().getComputedTextLength()); });
+  probe.remove();
+  const stacked = W < 520 || lw > W * 0.42;
+  const valW = o.valW ?? 92, bh = 18, rowH = stacked ? 46 : 30, top = stacked ? 20 : 6;
+  const iw = o.icon ? 22 : 0;
+  const x0 = stacked ? 0 : Math.ceil(lw) + 12 + iw, x1 = W - valW;
+  const tot = (r) => d3.sum(o.series, (s) => +r[s.key] || 0);
+  const max = o.normalize ? 1 : ((o.max ?? d3.max(rows, tot)) || 1);
+  const x = d3.scaleLinear().domain([0, max]).range([0, Math.max(10, x1 - x0)]);
+  const H = rows.length * rowH + 4;
+  svg.attr('height', H).attr('viewBox', `0 0 ${W} ${H}`);
+  const tip = wrap.append('div').attr('class', 'so-tip').attr('hidden', true);
+  rows.forEach((r, i) => {
+    const y = i * rowH + top;
+    const g = svg.append('g');
+    const ic = o.icon ? o.icon(r) : '';
+    if (ic) g.append('image').attr('href', ic).attr('width', 16).attr('height', 16).attr('x', stacked ? 0 : x0 - 12 - 16).attr('y', stacked ? y - 19 : y + 1).attr('aria-hidden', 'true');
+    g.append('text').attr('class', 'so-lab').attr('x', stacked ? iw : x0 - 12 - iw).attr('y', stacked ? y - 6 : y + bh / 2).attr('dy', stacked ? 0 : '0.35em').attr('text-anchor', stacked ? 'start' : 'end').text(r[o.label]);
+    if (o.track) g.append('rect').attr('x', x0).attr('y', y).attr('width', x(max)).attr('height', bh).attr('rx', 4).style('fill', 'var(--cds-chart-grid)');
+    const T = tot(r) || 1;
+    const segs = o.series.map((s) => ({ s, v: (+r[s.key] || 0) / (o.normalize ? T : 1), raw: +r[s.key] || 0 })).filter((d) => d.v > 0);
+    let cx = x0;
+    segs.forEach((d, j) => {
+      const last = j === segs.length - 1;
+      const w = x(d.v) - (last ? 0 : 2);
+      const c = typeof d.s.color === 'function' ? d.s.color(r) : d.s.color;
+      g.append('path').attr('d', SO.bar(cx, y, w, bh, last ? 4 : 0)).style('fill', c);
+      if (o.segLabel && w > 34) g.append('text').attr('class', 'so-seg').attr('x', cx + w / 2).attr('y', y + bh / 2).attr('dy', '0.35em').attr('text-anchor', 'middle').text(o.segLabel(d, r));
+      cx += x(d.v);
+    });
+    if (o.valueText) g.append('text').attr('class', 'so-val').attr('x', x0 + x(d3.sum(segs, (d) => d.v)) + 6).attr('y', y + bh / 2).attr('dy', '0.35em').text(o.valueText(r));
+    g.append('rect').attr('x', 0).attr('y', y - top).attr('width', W).attr('height', rowH).style('fill', 'transparent')
+      .on('pointermove', (ev) => {
+        tip.selectAll('*').remove();
+        tip.append('div').attr('class', 'so-tip-h').text(r[o.label]);
+        o.tip(r).forEach(([k, v, c]) => {
+          const l = tip.append('div').attr('class', 'so-tip-r');
+          if (c) l.append('span').attr('class', 'so-sw').style('background-color', c);
+          l.append('span').text(k); l.append('b').text(v);
+        });
+        const [mx, my] = d3.pointer(ev, wrap.node());
+        tip.attr('hidden', null).style('left', Math.max(0, Math.min(mx + 14, W - 226)) + 'px').style('top', (my + 14) + 'px');
+      })
+      .on('pointerleave', () => tip.attr('hidden', true));
+  });
+};
+</script>
+
+<script>
+const isFavor = (s) => s.startsWith('In favor');
+const total = (rows) => d3.sum(rows, (r) => +r.policies);
+dash.calc('allowance_groups', {
+  inputs: ['stance'],
+  fn: (stance) => {
+    const all = total(stance);
+    const group = (s) => (s.startsWith('In favor') ? 'In favor' : s.startsWith('Against') ? 'Against' : s);
+    return ['In favor', 'Against', 'Neutral', 'Undetermined']
+      .map((g) => { const n = d3.sum(stance.filter((r) => group(r.stance) === g), (r) => +r.policies); return { group: g, policies: n, pct: Math.round((1000 * n) / all) / 10 }; })
+      .filter((r) => r.policies > 0);
+  },
+});
+dash.calc('favor_share', { inputs: ['stance'], fn: (s) => Math.round((100 * total(s.filter((r) => isFavor(r.stance)))) / total(s)) });
+dash.calc('against_share', { inputs: ['stance'], fn: (s) => Math.round((100 * total(s.filter((r) => r.stance.startsWith('Against')))) / total(s)) });
+dash.calc('favor_total', { inputs: ['stance'], fn: (s) => total(s.filter((r) => isFavor(r.stance))) });
+dash.calc('human_total', { inputs: ['stance'], fn: (s) => d3.sum(s.filter((r) => isFavor(r.stance)), (r) => +r.mentions_human) });
+dash.calc('human_share', { inputs: ['stance'], fn: (s) => { const f = s.filter((r) => isFavor(r.stance)); return Math.round((100 * d3.sum(f, (r) => +r.mentions_human)) / total(f)); } });
+dash.calc('disclose_total', { inputs: ['disclose_where'], fn: (w) => d3.sum(w, (r) => +r.total) });
+dash.calc('disclose_share', { inputs: ['disclose_where', 'stance'], fn: (w, s) => Math.round((100 * d3.sum(w, (r) => +r.total)) / total(s)) });
+</script>
+
+<script>
+document.querySelectorAll('.so-sw[data-c]').forEach((s) => { s.style.backgroundColor = SO.color(+s.dataset.c); });
+document.querySelectorAll('.so-sw[data-s]').forEach((s) => { s.style.backgroundColor = SO.stanceColor(s.dataset.s); });
+
+const pol = () => dash.data('stance');
+dash.draw('n_policy', (el) => SO.text(el, dash.data('funnel'), (d) => SO.fmt(+SO.last(d).repos)));
+dash.draw('k_policy', (el) => SO.text(el, dash.data('funnel'), (d) => SO.fmt(+SO.last(d).repos)));
+dash.draw('n_policy_pct', (el) => SO.text(el, dash.data('funnel'), (d) => SO.pct(SO.last(d).pct_of_total)));
+dash.draw('k_policy_pct', (el) => SO.text(el, dash.data('funnel'), (d) => SO.pct(SO.last(d).pct_of_total)));
+['favor_share', 'k_favor'].forEach((n) => dash.draw(n, (el) => SO.text(el, dash.data('favor_share'), SO.pct0)));
+['against_share', 'k_against'].forEach((n) => dash.draw(n, (el) => SO.text(el, dash.data('against_share'), SO.pct0)));
+['k_human', 'k_human_top'].forEach((n) => dash.draw(n, (el) => SO.text(el, dash.data('human_total'), SO.fmt)));
+['k_human_fav', 'k_human_fav2', 'k_human_fav3'].forEach((n) => dash.draw(n, (el) => SO.text(el, dash.data('favor_total'), SO.fmt)));
+dash.draw('k_human_pct', (el) => SO.text(el, dash.data('human_share'), SO.pct0));
+['k_disc_n', 'k_disc_top'].forEach((n) => dash.draw(n, (el) => SO.text(el, dash.data('disclose_total'), SO.fmt)));
+['k_disc_all', 'k_disc_all2', 'k_disc_all3'].forEach((n) => dash.draw(n, (el) => SO.text(el, pol(), (d) => SO.fmt(total(d)))));
+dash.draw('k_disc_pct', (el) => SO.text(el, dash.data('disclose_share'), SO.pct0));
+['k_slop_n', 'k_slop_top'].forEach((n) => dash.draw(n, (el) => SO.text(el, dash.data('slop_summary'), (d) => SO.fmt(+d[0].policies_with_countermeasure))));
+['k_slop_all', 'k_slop_all2', 'k_slop_all3'].forEach((n) => dash.draw(n, (el) => SO.text(el, dash.data('slop_summary'), (d) => SO.fmt(+d[0].policies))));
+dash.draw('k_slop_pct', (el) => SO.text(el, dash.data('slop_summary'), (d) => SO.pct0(d[0].pct)));
+
+dash.draw('c_funnel', (el) => {
+  const d = dash.data('funnel'); if (d.status !== 'ok') return SO.wait(el, d.status);
+  SO.hbar(el, { rows: d.data, label: 'stage', track: true, series: [{ key: 'repos', color: SO.color(0) }],
+    valueText: (r) => SO.fmt(+r.repos),
+    tip: (r) => [['Repos', SO.fmt(+r.repos)], ['Share of top 25k', SO.pct(r.pct_of_total)]],
+    aria: 'Bar chart of how many top repositories have a contributing guide, an AI policy and an AI_POLICY.md file.' });
+});
+dash.draw('c_tiers', (el) => {
+  const d = dash.data('tiers'); if (d.status !== 'ok') return SO.wait(el, d.status);
+  SO.hbar(el, { rows: d.data, label: 'tier', max: 25, track: true, series: [{ key: 'pct_with_policy', color: SO.color(0) }],
+    valueText: (r) => SO.pct(r.pct_with_policy),
+    tip: (r) => [['With a policy', SO.fmt(+r.with_policy)], ['Repos in tier', SO.fmt(+r.repos)], ['Share', SO.pct(r.pct_with_policy)]],
+    aria: 'Bar chart of the share of repositories with an AI policy in each popularity tier.' });
+});
+dash.draw('c_langs', (el) => {
+  const d = dash.data('languages'); if (d.status !== 'ok') return SO.wait(el, d.status);
+  SO.hbar(el, { rows: d.data, label: 'language', max: 20, track: true, series: [{ key: 'pct_with_policy', color: SO.color(0) }],
+    icon: (r) => (String(r.icon || '').startsWith('data:image/svg+xml') ? r.icon : ''),
+    valueText: (r) => SO.pct(r.pct_with_policy),
+    tip: (r) => [['With a policy', SO.fmt(+r.with_policy)], ['Repos', SO.fmt(+r.repos)], ['Share', SO.pct(r.pct_with_policy)]],
+    aria: 'Bar chart of the share of repositories with an AI policy by primary language.' });
+});
+dash.draw('c_pie', (el) => {
+  const d = dash.data('allowance_groups'); if (d.status !== 'ok' || !d.data) return SO.wait(el, d.status);
+  el.classList.remove('dash-skeleton'); el.replaceChildren();
+  const rows = d.data;
+  const size = Math.max(180, Math.min(260, el.clientWidth || 260));
+  const R = size / 2;
+  const box = d3.select(el).append('div').attr('class', 'so-pie-row so-plot');
+  const svg = box.append('svg').attr('width', size).attr('height', size).attr('viewBox', `0 0 ${size} ${size}`)
+    .attr('role', 'img').attr('aria-label', 'Donut chart of AI policies in favor, against, neutral and undetermined.');
+  const g = svg.append('g').attr('transform', `translate(${R},${R})`);
+  const arcs = d3.pie().sort(null).value((r) => +r.policies)(rows);
+  const arc = d3.arc().innerRadius(R * 0.6).outerRadius(R - 2);
+  const tip = box.append('div').attr('class', 'so-tip').attr('hidden', true);
+  g.selectAll('path').data(arcs).join('path').attr('d', arc)
+    .style('fill', (a) => SO.stanceColor(a.data.group)).style('stroke', 'var(--color-bg)').style('stroke-width', 2)
+    .on('pointermove', (ev, a) => {
+      tip.selectAll('*').remove();
+      tip.append('div').attr('class', 'so-tip-h').text(a.data.group);
+      [['Policies', SO.fmt(+a.data.policies)], ['Share', SO.pct(a.data.pct)]].forEach(([k, v]) => { const l = tip.append('div').attr('class', 'so-tip-r'); l.append('span').text(k); l.append('b').text(v); });
+      const [mx, my] = d3.pointer(ev, box.node());
+      tip.attr('hidden', null).style('left', Math.max(0, Math.min(mx + 14, box.node().clientWidth - 226)) + 'px').style('top', (my + 14) + 'px');
+    })
+    .on('pointerleave', () => tip.attr('hidden', true));
+  g.append('text').attr('class', 'so-pie-total').attr('text-anchor', 'middle').attr('dy', '0.1em').text(SO.fmt(d3.sum(rows, (r) => +r.policies)));
+  g.append('text').attr('class', 'so-pie-sub').attr('text-anchor', 'middle').attr('dy', '1.6em').text('policies');
+  const ul = box.append('ul').attr('class', 'so-pie-list');
+  rows.forEach((r) => {
+    const li = ul.append('li');
+    li.append('span').attr('class', 'so-sw').style('background-color', SO.stanceColor(r.group));
+    li.append('span').text(r.group);
+    li.append('b').text(`${SO.fmt(+r.policies)} · ${SO.pct(r.pct)}`);
+  });
+});
+dash.draw('c_stance', (el) => {
+  const d = dash.data('stance'); if (d.status !== 'ok') return SO.wait(el, d.status);
+  SO.hbar(el, { rows: d.data, label: 'stance', valW: 104, series: [{ key: 'policies', color: (r) => SO.stanceColor(r.stance) }],
+    valueText: (r) => `${SO.fmt(+r.policies)} · ${SO.pct(r.pct)}`,
+    tip: (r) => [['Policies', SO.fmt(+r.policies)], ['Share', SO.pct(r.pct)]],
+    aria: 'Bar chart of the number of AI policies by AI allowance.' });
+});
+dash.draw('c_stance_tier', (el) => {
+  const d = dash.data('tiers'); if (d.status !== 'ok') return SO.wait(el, d.status);
+  const keys = [['in_favor', 'In favor'], ['against', 'Against'], ['neutral', 'Neutral'], ['undetermined', 'Undetermined']];
+  SO.hbar(el, { rows: d.data, label: 'tier', normalize: true, valW: 8, series: keys.map(([k, n]) => ({ key: k, color: SO.stanceColor(n) })),
+    segLabel: (s) => Math.round(s.v * 100) + '%',
+    tip: (r) => keys.map(([k, n]) => [n, `${SO.fmt(+r[k])} (${Math.round((100 * +r[k]) / +r.with_policy)}%)`, SO.stanceColor(n)]),
+    aria: 'Stacked bar chart of AI allowance within each popularity tier.' });
+});
+dash.draw('c_human_req', (el) => {
+  const d = dash.data('human'); if (d.status !== 'ok') return SO.wait(el, d.status);
+  SO.hbar(el, { rows: d.data, label: 'requirement', max: 100, track: true, valW: 92, series: [{ key: 'pct', color: SO.color(0) }],
+    valueText: (r) => `${SO.fmt(+r.policies)} · ${r.pct}%`,
+    tip: (r) => [['Policies', SO.fmt(+r.policies)], ['Share of policies that accept AI', r.pct + '%']],
+    aria: 'Bar chart of the duties that AI policies set for the human contributor.' });
+});
+dash.draw('c_disc_where', (el) => {
+  const d = dash.data('disclose_where'); if (d.status !== 'ok') return SO.wait(el, d.status);
+  SO.hbar(el, { rows: d.data, label: 'format', valW: 44, series: [{ key: 'required', color: SO.color(0) }, { key: 'recommended', color: SO.color(1) }],
+    valueText: (r) => SO.fmt(+r.total),
+    tip: (r) => [['Required', SO.fmt(+r.required), SO.color(0)], ['Recommended', SO.fmt(+r.recommended), SO.color(1)], ['Total', SO.fmt(+r.total)]],
+    aria: 'Stacked bar chart of where policies ask contributors to disclose AI use, split into required and recommended.' });
+});
+dash.draw('c_disc_info', (el) => {
+  const d = dash.data('disclose_info'); if (d.status !== 'ok') return SO.wait(el, d.status);
+  SO.hbar(el, { rows: d.data, label: 'item', max: 100, track: true, valW: 48, series: [{ key: 'pct_of_requests', color: SO.color(0) }],
+    valueText: (r) => r.pct_of_requests + '%',
+    tip: (r) => [['Policies', SO.fmt(+r.policies)], ['Share of disclosure policies', r.pct_of_requests + '%']],
+    aria: 'Bar chart of what information disclosure policies ask for.' });
+});
+dash.draw('c_trailers', (el) => {
+  const d = dash.data('trailers'); if (d.status !== 'ok') return SO.wait(el, d.status);
+  const keys = [['asked_or_allowed', 'Asked for or allowed'], ['forbidden', 'Forbidden or discouraged']];
+  SO.hbar(el, { rows: d.data, label: 'trailer', valW: 44, series: keys.map(([k], i) => ({ key: k, color: SO.color(i) })),
+    segLabel: (s) => String(s.raw),
+    valueText: (r) => SO.fmt(+r.mentioned),
+    tip: (r) => keys.map(([k, n], i) => [n, SO.fmt(+r[k]), SO.color(i)]).concat([['Policies that mention it', SO.fmt(+r.mentioned)]]),
+    aria: 'Stacked bar chart of git trailers for AI, by whether policies ask for or forbid them.' });
+});
+dash.draw('c_slop', (el) => {
+  const d = dash.data('antislop'); if (d.status !== 'ok') return SO.wait(el, d.status);
+  const groups = ['Human accountability', 'Enforcement', 'Barriers to entry', 'Automation and traps'];
+  SO.hbar(el, { rows: d.data, label: 'mechanism', valW: 92, series: [{ key: 'policies', color: (r) => SO.color(Math.max(0, groups.indexOf(r.group))) }],
+    valueText: (r) => `${SO.fmt(+r.policies)} · ${r.pct}%`,
+    tip: (r) => [['Group', r.group], ['Policies', SO.fmt(+r.policies)], ['Share of all policies', r.pct + '%']],
+    aria: 'Bar chart of mechanisms against AI slop and how many policies use each.' });
+});
+
+SO.filter = { stance: '', lang: '', q: '' };
+SO.evCell = (tr, val, ev) => {
+  const c = tr.insertCell(); c.className = 'so-ev';
+  const b = document.createElement('div'); b.className = 'so-ev-v'; b.textContent = val || '—'; c.append(b);
+  if (ev) { const e = document.createElement('div'); e.className = 'so-ev-x'; e.textContent = ev; c.append(e); }
+};
+dash.draw('f_lang', (sel) => {
+  const d = dash.data('repos'); if (d.status !== 'ok') return;
+  const keep = SO.filter.lang;
+  sel.replaceChildren();
+  const any = document.createElement('option'); any.value = ''; any.textContent = 'Any language'; sel.append(any);
+  const counts = d3.rollup(d.data, (v) => v.length, (r) => r.language || '');
+  Array.from(counts).filter(([l]) => l).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).forEach(([l, n]) => {
+    const o = document.createElement('option'); o.value = l; o.textContent = `${l} (${n})`; sel.append(o);
+  });
+  sel.value = keep;
+});
+dash.draw('t_repos', (tb) => {
+  const d = dash.data('repos');
+  tb.replaceChildren();
+  if (d.status !== 'ok') {
+    if (d.status === 'error') { const tr = tb.insertRow(); const td = tr.insertCell(); td.colSpan = 8; td.className = 'so-err'; td.textContent = 'The repository list couldn’t load.'; }
+    return;
+  }
+  const ld = dash.data('languages');
+  const icons = new Map(ld.status === 'ok' ? ld.data.filter((x) => String(x.icon || '').startsWith('data:image/svg+xml')).map((x) => [x.language, x.icon]) : []);
+  const q = SO.filter.q.trim().toLowerCase();
+  d.data.slice().sort((a, b) => (+b.stars) - (+a.stars)).filter((r) => (!SO.filter.stance || r.stance === SO.filter.stance) && (!SO.filter.lang || r.language === SO.filter.lang) && (!q || r.repo.toLowerCase().includes(q))).forEach((r) => {
+    const tr = tb.insertRow();
+    const a = tr.insertCell();
+    if (String(r.url).startsWith('https://')) { const l = document.createElement('a'); l.href = r.url; l.target = '_blank'; l.rel = 'noopener'; l.textContent = r.repo; a.append(l); } else a.textContent = r.repo;
+    const s = tr.insertCell(); s.className = 'n'; s.textContent = SO.fmt(+r.stars);
+    const lc = tr.insertCell(); lc.className = 'so-nw';
+    const ls = document.createElement('span'); ls.className = 'so-langcell';
+    const ic = icons.get(r.language);
+    if (ic) { const im = document.createElement('img'); im.src = ic; im.alt = ''; im.className = 'so-langico'; ls.append(im); }
+    ls.append(document.createTextNode(r.language || '—'));
+    lc.append(ls);
+    tr.insertCell().textContent = r.stance;
+    const pf = tr.insertCell(); pf.className = 'so-nw';
+    if (String(r.policy_url).startsWith('https://')) { const pl = document.createElement('a'); pl.href = r.policy_url; pl.target = '_blank'; pl.rel = 'noopener'; pl.textContent = r.policy_file + ' ↗'; pf.append(pl); } else pf.textContent = r.policy_file;
+    const sn = tr.insertCell(); sn.className = 'so-snip'; sn.textContent = r.snippet || '';
+    SO.evCell(tr, r.disclosure, r.disclosure_excerpt);
+    SO.evCell(tr, r.human === '—' ? '—' : r.human, r.human_duties ? r.human_duties + (r.human_excerpt ? ' — “' + r.human_excerpt + '”' : '') : '');
+  });
+});
+document.getElementById('f-stance').addEventListener('change', (e) => { SO.filter.stance = e.target.value; dash.draw('t_repos'); });
+document.getElementById('f-lang').addEventListener('change', (e) => { SO.filter.lang = e.target.value; dash.draw('t_repos'); });
+document.getElementById('f-q').addEventListener('input', (e) => { SO.filter.q = e.target.value; dash.draw('t_repos'); });
+</script>
+</body>
+</html>
