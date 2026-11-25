@@ -338,7 +338,7 @@ a.dash-button#dl-repos{text-decoration:none;display:inline-flex;align-items:cent
 <section class='so-sec' id='method'>
 <p class='so-chap'><a href='#method'>METHODOLOGY</a></p>
 <ul class='so-method'>
-<li><b>Sample.</b> The 25,000 most-starred public GitHub repositories (forks excluded, at least 2,736 stars), collected on 25 November 2026. One repository could not be downloaded.</li>
+<li><b>Sample.</b> The 25,000 most-starred public GitHub repositories (forks excluded), collected on 25 November 2026. One repository could not be downloaded.</li>
 <li><b>Files.</b> CONTRIBUTING.md at the root, <code>.github/</code> and <code>docs/</code>, plus AI_POLICY.md and AI_USAGE_POLICY.md. Policies kept only on a website, a wiki or in AGENTS.md, with no mention in these files, are not counted, so adoption is a lower bound.</li>
 <li><b>Classification.</b> Claude Opus 5.5 was used to classify the policies. Where a count starts from text patterns, the patterns only found candidate sentences; every candidate was then read, and false matches were removed. Policies with unusual wording may still be missed, so those counts are a lower bound. An AI model can misread or misclassify a policy, so treat the figures as estimates.</li>
 <li><b>01 · Adoption of AI policies.</b> A policy is a rule about using AI to contribute, found in CONTRIBUTING.md or an AI_POLICY.md file. Every candidate file was read; projects that only describe their own AI features or agent tooling were removed as false positives. Popularity tiers are ranks by star count. Language is GitHub’s detected primary language.</li>
