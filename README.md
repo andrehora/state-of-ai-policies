@@ -22,8 +22,6 @@ src/
   icons/                              language logos from Devicon
 ```
 
-The downloadable table is dated by snapshot (25 November 2026), so a later run can sit next to this one.
-
 | File | What it holds |
 |---|---|
 | `data/ai-policies_2026-11-25.csv` | One row per policy: repository, stars, main language, AI allowance, permalink to the policy, policy excerpt, AI disclosure (with excerpt) and human duties (with excerpt). |
@@ -57,7 +55,7 @@ The downloadable table is dated by snapshot (25 November 2026), so a later run c
 5. `src/collect/human25.py` and `src/collect/slop25.py` find candidate sentences for human duties and countermeasures. Every candidate sentence was read, and false matches were removed. The results are in `data/input/evidence.json`.
 6. `src/collect/links25.py` and `src/collect/findline.py` build permalinks pinned to a commit.
 
-**Classification.** Claude Opus 5.5 was used to classify the policies: all the reading and classification was done by it, one policy at a time rather than by keyword rules. An AI model can misread or misclassify a policy, so treat the figures as estimates. Policies with unusual wording may be missed, so counts of human duties, countermeasures, disclosure items and trailers are a lower bound.
+**Classification.** Claude Opus 5.5 was used to classify the policies. Policies with unusual wording may be missed, so counts of human duties, countermeasures, disclosure items and trailers are a lower bound. An AI model can misread or misclassify a policy, so treat the figures as estimates
 
 ## References
 
