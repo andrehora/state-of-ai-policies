@@ -1,0 +1,10 @@
+mechanism,group,policies,pct
+Must disclose AI use,Human accountability,412,32
+No autonomous agents or bots,Human accountability,133,10
+Close without review or notice,Enforcement,132,10
+Ban or block repeat offenders,Enforcement,98,8
+Require an approved issue first,Barriers to entry,67,5
+Restrict newcomers or require vouching,Barriers to entry,14,1
+Cap the number of PRs,Barriers to entry,7,1
+Canary or signal for agents,Automation and traps,37,3
+Automated detection or slop labels,Automation and traps,7,1

@@ -1,0 +1,7 @@
+format,required,recommended,total
+Free text in the PR description,119,24,143
+Doesn't say where,124,12,136
+Commit trailer,28,15,43
+PR template section or checkbox,34,1,35
+Mark the generated passage,30,2,32
+PR description and commit trailer,20,3,23
