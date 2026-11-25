@@ -2,7 +2,7 @@
 
 Data and code behind the report *AI contribution policies in the top 25,000 GitHub repositories* (November 2026).
 
-Of the 25,000 most-starred GitHub repositories, 1,284 (5.1%) publish rules on using AI to contribute. 81% of those policies accept AI, almost always with conditions, and 14% reject it.
+https://andrehora.github.io/state-of-ai-policies/
 
 ## Quick start
 
